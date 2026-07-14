@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": ".qianwenyun-deploy state file",
+  "description": "qianwenyun-deploy 写入的部署状态。删除 / 再部署 / 热更新时复用。",
+  "type": "object",
+  "required": ["version", "region_id", "topology", "app_type", "created_at", "tags", "outputs"],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "deploy_mode": {
+      "type": "string",
+      "enum": ["full-stack"],
+      "default": "full-stack",
+      "description": "部署模式：full-stack = ROS 全栈编排"
+    },
+    "stack_id": {
+      "type": "string",
+      "description": "ROS Stack ID"
+    },
+    "stack_name": {
+      "type": "string",
+      "description": "ROS Stack Name"
+    },
+    "region_id": { "type": "string", "examples": ["cn-hangzhou", "cn-shanghai"] },
+    "topology": { "type": "string", "enum": ["single", "ha"] },
+    "app_type": {
+      "type": "string",
+      "enum": ["frontend-only", "docker", "binary-go", "binary-java", "binary-node", "binary-python"]
+    },
+    "frontend_dir": {
+      "type": ["string", "null"],
+      "description": "本地前端 build 产物目录（相对项目根），无前端时为 null"
+    },
+    "backend_dir": {
+      "type": ["string", "null"],
+      "description": "本地后端目录或产物所在目录"
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["Key", "Value"],
+        "properties": {
+          "Key": { "type": "string" },
+          "Value": { "type": "string" }
+        }
+      },
+      "contains": {
+        "type": "object",
+        "properties": {
+          "Key": { "const": "from" },
+          "Value": { "const": "qianwenyun" }
+        }
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "required": ["public_ip"],
+      "properties": {
+        "public_ip": { "type": "string" },
+        "ecs_instance_ids": { "type": "array", "items": { "type": "string" } },
+        "slb_id": { "type": ["string", "null"] },
+        "db_instance_id": {
+          "type": ["string", "null"],
+          "description": "RDS 实例 ID（含 RDS 部署时存在）"
+        },
+        "db_connection_address": {
+          "type": ["string", "null"],
+          "description": "RDS 内网连接地址"
+        },
+        "db_port": { "type": ["integer", "null"] },
+        "db_account": { "type": ["string", "null"] }
+      }
+    },
+    "nginx_mode": {
+      "type": ["string", "null"],
+      "enum": ["static-proxy", "proxy", "static", null],
+      "description": "Nginx 托管模式：static-proxy（静态托管+反代）、proxy（全量反代）、static（纯静态）"
+    },
+    "artifact_bucket": {
+      "type": ["string", "null"],
+      "description": "本次部署使用的临时 OSS 桶（删除栈时一并清理）"
+    },
+    "db_engine": {
+      "type": ["string", "null"],
+      "enum": ["mysql", null],
+      "description": "若部署一并开通了 RDS，记录引擎类型。v1 仅 mysql。"
+    },
+    "notes": { "type": "string" },
+    "provisional": {
+      "type": "boolean",
+      "description": "true 表示这是 create_stack.sh 在拿到 StackId 后立即写入的临时状态（仅含 stack_id / stack_name / region_id 等定位字段，可能缺 topology / app_type / outputs）。用于中断后仍能被 delete_stack.sh 清理；record_state.py 成功后会覆盖为完整状态并去掉该字段。"
+    },
+    "updated_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "最近一次热更新时间（由 update_app.sh 写入）。首次部署后为 null。"
+    },
+    "previous_artifact_urls": {
+      "type": ["object", "null"],
+      "description": "上一版本的产物签名 URL（供回滚使用）。热更新时由 update_app.sh 写入。",
+      "properties": {
+        "backend_url": { "type": ["string", "null"] },
+        "frontend_url": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

@@ -1,0 +1,296 @@
+ROSTemplateFormatVersion: '2015-09-01'
+Description: 'qianwenyun single-host + RDS MySQL: 1 ECS + EIP + VPC + SG + RDS MySQL. UserData is inlined via Fn::Sub to bake the RDS internal address/port into the boot script.'
+
+Parameters:
+  AppName:
+    Type: String
+    Description: 应用名（用于资源命名），仅小写字母数字和短横线
+    Default: app
+    AllowedPattern: '^[a-z][a-z0-9-]{0,30}$'
+  InstanceType:
+    Type: String
+    Default: ecs.e-c1m2.large
+  ImageId:
+    Type: String
+    Default: aliyun_3_x64_20G_alibase_20240528.vhd
+  Password:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 30
+  SystemDiskSize:
+    Type: Number
+    Default: 40
+    MinValue: 20
+    MaxValue: 500
+  ZoneId:
+    Type: String
+    Description: 可用区 ID（从 check_stock.sh 输出中选取有库存的区）
+  BackendPort:
+    Type: Number
+    Default: 8080
+  DbInstanceClass:
+    Type: String
+    Default: mysql.n2.medium.1
+    Description: RDS MySQL 实例规格
+  DbInstanceStorage:
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 6000
+    Description: RDS 存储空间 GB
+  DbName:
+    Type: String
+    Default: appdb
+    AllowedPattern: '^[a-z][a-z0-9_]{0,62}$'
+  DbAccount:
+    Type: String
+    Default: appuser
+    AllowedPattern: '^[a-z][a-z0-9_]{0,15}$'
+  DbPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 32
+    Description: RDS 账号密码（8-32 位，含大小写字母+数字+特殊字符）
+
+Resources:
+  Vpc:
+    Type: ALIYUN::ECS::VPC
+    Properties:
+      VpcName:
+        Fn::Sub: qianwenyun-${AppName}-vpc
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: from
+          Value: qianwenyun
+        - Key: qianwenyun-appName
+          Value:
+            Ref: AppName
+
+  VSwitch:
+    Type: ALIYUN::ECS::VSwitch
+    Properties:
+      VpcId:
+        Ref: Vpc
+      ZoneId:
+        Ref: ZoneId
+      CidrBlock: 10.0.1.0/24
+      VSwitchName:
+        Fn::Sub: qianwenyun-${AppName}-vsw
+      Tags:
+        - Key: from
+          Value: qianwenyun
+
+  SecurityGroup:
+    Type: ALIYUN::ECS::SecurityGroup
+    Properties:
+      SecurityGroupName:
+        Fn::Sub: qianwenyun-${AppName}-sg
+      VpcId:
+        Ref: Vpc
+      SecurityGroupIngress:
+        # WARNING: SSH 对公网开放，部署完成后建议收窄为具体 IP 或 VPN 网段
+        - PortRange: 22/22
+          Priority: 1
+          IpProtocol: tcp
+          SourceCidrIp: 0.0.0.0/0
+          NicType: intranet
+        - PortRange: 80/80
+          Priority: 1
+          IpProtocol: tcp
+          SourceCidrIp: 0.0.0.0/0
+          NicType: intranet
+        - PortRange: 443/443
+          Priority: 1
+          IpProtocol: tcp
+          SourceCidrIp: 0.0.0.0/0
+          NicType: intranet
+      Tags:
+        - Key: from
+          Value: qianwenyun
+
+  RdsInstance:
+    Type: ALIYUN::RDS::DBInstance
+    Properties:
+      Engine: MySQL
+      EngineVersion: '8.0'
+      DBInstanceClass:
+        Ref: DbInstanceClass
+      DBInstanceStorage:
+        Ref: DbInstanceStorage
+      DBInstanceStorageType: cloud_essd
+      PayType: Postpaid
+      DBInstanceDescription:
+        Fn::Sub: qianwenyun-${AppName}-rds
+      VpcId:
+        Ref: Vpc
+      VSwitchId:
+        Ref: VSwitch
+      ZoneId:
+        Ref: ZoneId
+      SecurityIPList: 10.0.0.0/16
+      DeletionProtection: false
+      Tags:
+        from: qianwenyun
+
+  RdsDatabase:
+    Type: ALIYUN::RDS::Database
+    Properties:
+      DBInstanceId:
+        Ref: RdsInstance
+      DBName:
+        Ref: DbName
+      CharacterSetName: utf8mb4
+    DependsOn: RdsInstance
+
+  RdsAccount:
+    Type: ALIYUN::RDS::Account
+    Properties:
+      DBInstanceId:
+        Ref: RdsInstance
+      AccountName:
+        Ref: DbAccount
+      AccountPassword:
+        Ref: DbPassword
+      AccountType: Normal
+    DependsOn: RdsDatabase
+
+  RdsAccountPrivilege:
+    Type: ALIYUN::RDS::AccountPrivilege
+    Properties:
+      DBInstanceId:
+        Ref: RdsInstance
+      AccountName:
+        Ref: DbAccount
+      DBName:
+        Ref: DbName
+      AccountPrivilege: ReadWrite
+    DependsOn: RdsAccount
+
+  EcsInstance:
+    Type: ALIYUN::ECS::InstanceGroup
+    Properties:
+      ImageId:
+        Ref: ImageId
+      InstanceType:
+        Ref: InstanceType
+      InstanceChargeType: PostPaid
+      Password:
+        Ref: Password
+      SecurityGroupId:
+        Ref: SecurityGroup
+      VSwitchId:
+        Ref: VSwitch
+      VpcId:
+        Ref: Vpc
+      InstanceName:
+        Fn::Sub: qianwenyun-${AppName}-ecs-[1,2]
+      HostName:
+        Fn::Sub: qianwenyun-${AppName}-ecs-[1,2]
+      MaxAmount: 1
+      MinAmount: 1
+      SystemDiskCategory: cloud_essd
+      SystemDiskSize:
+        Ref: SystemDiskSize
+      AllocatePublicIP: false
+      UserData:
+        Fn::Sub:
+          - |
+            #!/bin/bash
+            set -euxo pipefail
+            exec >> /var/log/qianwenyun-bootstrap.log 2>&1
+            echo "[$(date -u +%FT%TZ)] === qianwenyun bootstrap (with RDS) start ==="
+
+            mkdir -p /etc/qianwenyun
+            cat > /etc/qianwenyun/db.env <<DBENV
+            DATABASE_URL="mysql://${DbAccount}:${DbPassword}@${RdsAddr}:${RdsPort}/${DbName}"
+            DB_HOST="${RdsAddr}"
+            DB_PORT="${RdsPort}"
+            DB_NAME="${DbName}"
+            DB_USER="${DbAccount}"
+            DB_PASSWORD="${DbPassword}"
+            DBENV
+            chmod 600 /etc/qianwenyun/db.env
+
+            set -a
+            . /etc/qianwenyun/db.env
+            set +a
+
+            # ↓↓↓ generate_template.py 注入 base64 编码的引导脚本（解码后 source 执行，继承 db.env） ↓↓↓
+            __USERDATA_BODY__
+          - RdsAddr:
+              Fn::GetAtt: [RdsInstance, InnerConnectionString]
+            RdsPort:
+              Fn::GetAtt: [RdsInstance, InnerPort]
+      Tags:
+        - Key: from
+          Value: qianwenyun
+        - Key: qianwenyun-appName
+          Value:
+            Ref: AppName
+    DependsOn: RdsAccountPrivilege
+
+  Eip:
+    Type: ALIYUN::VPC::EIP
+    Properties:
+      Name:
+        Fn::Sub: qianwenyun-${AppName}-eip
+      InternetChargeType: PayByTraffic
+      Bandwidth: 5
+      Tags:
+        - Key: from
+          Value: qianwenyun
+
+  EipAssoc:
+    Type: ALIYUN::VPC::EIPAssociation
+    Properties:
+      AllocationId:
+        Ref: Eip
+      InstanceId:
+        Fn::Select:
+          - 0
+          - Fn::GetAtt:
+              - EcsInstance
+              - InstanceIds
+
+Outputs:
+  PublicIp:
+    Description: 公网访问 IP（前端 http://<IP>/，后端 http://<IP>/api/）
+    Value:
+      Fn::GetAtt:
+        - Eip
+        - EipAddress
+  EcsInstanceIds:
+    Description: ECS 实例 ID 列表
+    Value:
+      Fn::GetAtt:
+        - EcsInstance
+        - InstanceIds
+  EcsPrivateIps:
+    Value:
+      Fn::GetAtt:
+        - EcsInstance
+        - PrivateIps
+  DbInstanceId:
+    Description: RDS 实例 ID
+    Value:
+      Ref: RdsInstance
+  DbConnectionAddress:
+    Description: RDS 内网连接地址
+    Value:
+      Fn::GetAtt:
+        - RdsInstance
+        - InnerConnectionString
+  DbPort:
+    Description: RDS 内网端口
+    Value:
+      Fn::GetAtt:
+        - RdsInstance
+        - InnerPort
+  DbAccount:
+    Value:
+      Ref: DbAccount
+  StackName:
+    Value:
+      Ref: ALIYUN::StackName

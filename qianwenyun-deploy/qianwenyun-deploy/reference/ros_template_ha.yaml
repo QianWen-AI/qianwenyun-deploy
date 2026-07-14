@@ -1,0 +1,271 @@
+ROSTemplateFormatVersion: '2015-09-01'
+Description: 'qianwenyun HA deployment: 2 ECS across 2 AZs + public SLB + VPC. SLB
+  public IP as the single entrypoint (port 80 -> backend port 80 on each ECS Nginx).'
+Parameters:
+  AppName:
+    Type: String
+    Description: 应用名（用于资源命名）
+    Default: app
+    AllowedPattern: ^[a-z][a-z0-9-]{0,30}$
+  InstanceType:
+    Type: String
+    Default: ecs.e-c1m2.large
+  ImageId:
+    Type: String
+    Default: aliyun_3_x64_20G_alibase_20240528.vhd
+  Password:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 30
+  SystemDiskSize:
+    Type: Number
+    Default: 40
+    MinValue: 20
+    MaxValue: 500
+  BackendPort:
+    Type: Number
+    Default: 8080
+  ZoneIdA:
+    Type: String
+    Description: 可用区 A（从 check_stock.sh 输出中选取有库存的区）
+  ZoneIdB:
+    Type: String
+    Description: 可用区 B（与 A 不同，跨 AZ 容灾）
+  SlbSpec:
+    Type: String
+    Default: slb.s2.small
+    Description: SLB 性能规格
+  UserDataScript:
+    Type: String
+    Description: bootstrap 脚本（明文，ROS 会自动 base64 编码）
+    Default: '#!/bin/bash
+
+      echo "no userdata provided" > /var/log/qianwenyun-bootstrap.log
+
+      '
+Resources:
+  Vpc:
+    Type: ALIYUN::ECS::VPC
+    Properties:
+      VpcName:
+        Fn::Sub: qianwenyun-${AppName}-vpc
+      CidrBlock: 10.0.0.0/16
+      Tags:
+      - Key: from
+        Value: qianwenyun
+      - Key: qianwenyun-appName
+        Value:
+          Ref: AppName
+  VSwitchA:
+    Type: ALIYUN::ECS::VSwitch
+    Properties:
+      VpcId:
+        Ref: Vpc
+      ZoneId:
+        Ref: ZoneIdA
+      CidrBlock: 10.0.1.0/24
+      VSwitchName:
+        Fn::Sub: qianwenyun-${AppName}-vsw-a
+      Tags:
+      - Key: from
+        Value: qianwenyun
+  VSwitchB:
+    Type: ALIYUN::ECS::VSwitch
+    Properties:
+      VpcId:
+        Ref: Vpc
+      ZoneId:
+        Ref: ZoneIdB
+      CidrBlock: 10.0.2.0/24
+      VSwitchName:
+        Fn::Sub: qianwenyun-${AppName}-vsw-b
+      Tags:
+      - Key: from
+        Value: qianwenyun
+  SecurityGroup:
+    Type: ALIYUN::ECS::SecurityGroup
+    Properties:
+      SecurityGroupName:
+        Fn::Sub: qianwenyun-${AppName}-sg
+      VpcId:
+        Ref: Vpc
+      SecurityGroupIngress:
+      # WARNING: SSH 对公网开放，部署完成后建议收窄为具体 IP 或 VPN 网段
+      - PortRange: 22/22
+        Priority: 1
+        IpProtocol: tcp
+        SourceCidrIp: 0.0.0.0/0
+        NicType: intranet
+      - PortRange: 80/80
+        Priority: 1
+        IpProtocol: tcp
+        SourceCidrIp: 0.0.0.0/0
+        NicType: intranet
+      - PortRange: 443/443
+        Priority: 1
+        IpProtocol: tcp
+        SourceCidrIp: 0.0.0.0/0
+        NicType: intranet
+      Tags:
+      - Key: from
+        Value: qianwenyun
+  EcsA:
+    Type: ALIYUN::ECS::InstanceGroup
+    Properties:
+      ImageId:
+        Ref: ImageId
+      InstanceType:
+        Ref: InstanceType
+      InstanceChargeType: PostPaid
+      Password:
+        Ref: Password
+      SecurityGroupId:
+        Ref: SecurityGroup
+      VSwitchId:
+        Ref: VSwitchA
+      VpcId:
+        Ref: Vpc
+      ZoneId:
+        Ref: ZoneIdA
+      InstanceName:
+        Fn::Sub: qianwenyun-${AppName}-ecs-a
+      HostName:
+        Fn::Sub: qianwenyun-${AppName}-ecs-a
+      MaxAmount: 1
+      MinAmount: 1
+      SystemDiskCategory: cloud_essd
+      SystemDiskSize:
+        Ref: SystemDiskSize
+      AllocatePublicIP: false
+      UserData:
+        Ref: UserDataScript
+      Tags:
+      - Key: from
+        Value: qianwenyun
+      - Key: qianwenyun-appName
+        Value:
+          Ref: AppName
+  EcsB:
+    Type: ALIYUN::ECS::InstanceGroup
+    Properties:
+      ImageId:
+        Ref: ImageId
+      InstanceType:
+        Ref: InstanceType
+      InstanceChargeType: PostPaid
+      Password:
+        Ref: Password
+      SecurityGroupId:
+        Ref: SecurityGroup
+      VSwitchId:
+        Ref: VSwitchB
+      VpcId:
+        Ref: Vpc
+      ZoneId:
+        Ref: ZoneIdB
+      InstanceName:
+        Fn::Sub: qianwenyun-${AppName}-ecs-b
+      HostName:
+        Fn::Sub: qianwenyun-${AppName}-ecs-b
+      MaxAmount: 1
+      MinAmount: 1
+      SystemDiskCategory: cloud_essd
+      SystemDiskSize:
+        Ref: SystemDiskSize
+      AllocatePublicIP: false
+      UserData:
+        Ref: UserDataScript
+      Tags:
+      - Key: from
+        Value: qianwenyun
+      - Key: qianwenyun-appName
+        Value:
+          Ref: AppName
+  Slb:
+    Type: ALIYUN::SLB::LoadBalancer
+    Properties:
+      LoadBalancerName:
+        Fn::Sub: qianwenyun-${AppName}-slb
+      AddressType: internet
+      LoadBalancerSpec:
+        Ref: SlbSpec
+      InternetChargeType: paybytraffic
+      VpcId:
+        Ref: Vpc
+      Tags:
+      - Key: from
+        Value: qianwenyun
+      - Key: qianwenyun-appName
+        Value:
+          Ref: AppName
+  SlbListenerHttp:
+    Type: ALIYUN::SLB::Listener
+    Properties:
+      LoadBalancerId:
+        Ref: Slb
+      ListenerPort: 80
+      BackendServerPort: 80
+      Protocol: http
+      Bandwidth: -1
+      HealthCheck:
+        HealthCheckType: http
+        Switch: 'on'
+        Port: 80
+        HttpCode: http_2xx,http_3xx
+        URI: /
+        Interval: 5
+        UnhealthyThreshold: 3
+        HealthyThreshold: 3
+        Timeout: 3
+    DependsOn:
+    - BackendAttach
+  BackendAttach:
+    Type: ALIYUN::SLB::BackendServerAttachment
+    Properties:
+      LoadBalancerId:
+        Ref: Slb
+      BackendServers:
+      - ServerId:
+          Fn::Select:
+          - 0
+          - Fn::GetAtt:
+            - EcsA
+            - InstanceIds
+        Weight: 100
+      - ServerId:
+          Fn::Select:
+          - 0
+          - Fn::GetAtt:
+            - EcsB
+            - InstanceIds
+        Weight: 100
+Outputs:
+  PublicIp:
+    Description: SLB 公网入口 IP（前端 http://<IP>/，后端 http://<IP>/api/）
+    Value:
+      Fn::GetAtt:
+      - Slb
+      - IpAddress
+  SlbId:
+    Value:
+      Ref: Slb
+  EcsInstanceIds:
+    Description: 全部 ECS 实例 ID
+    Value:
+      Fn::Join:
+      - ','
+      - - Fn::Select:
+          - 0
+          - Fn::GetAtt:
+            - EcsA
+            - InstanceIds
+        - Fn::Select:
+          - 0
+          - Fn::GetAtt:
+            - EcsB
+            - InstanceIds
+  StackName:
+    Value:
+      Ref: ALIYUN::StackName
+

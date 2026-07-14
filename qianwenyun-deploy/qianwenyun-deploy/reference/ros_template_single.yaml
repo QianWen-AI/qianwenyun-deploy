@@ -1,0 +1,178 @@
+ROSTemplateFormatVersion: '2015-09-01'
+Description: 'qianwenyun single-host deployment: 1 ECS + EIP + VPC + SecurityGroup. Frontend Nginx + backend service co-located on one VM.'
+
+Parameters:
+  AppName:
+    Type: String
+    Description: 应用名（用于资源命名），仅小写字母数字和短横线
+    Default: app
+    AllowedPattern: '^[a-z][a-z0-9-]{0,30}$'
+  InstanceType:
+    Type: String
+    Description: ECS 实例规格
+    Default: ecs.e-c1m2.large
+  ImageId:
+    Type: String
+    Default: aliyun_3_x64_20G_alibase_20240528.vhd
+    Description: 操作系统镜像。默认 Alibaba Cloud Linux 3 x86_64。
+  Password:
+    Type: String
+    NoEcho: true
+    Description: ECS 登录密码（8-30 位，含大小写字母+数字）
+    MinLength: 8
+    MaxLength: 30
+  SystemDiskSize:
+    Type: Number
+    Default: 40
+    MinValue: 20
+    MaxValue: 500
+  ZoneId:
+    Type: String
+    Description: 可用区 ID（从 check_stock.sh 输出中选取有库存的区）
+  BackendPort:
+    Type: Number
+    Default: 8080
+    Description: 后端服务监听端口（被 Nginx 反代到 /api/）
+  UserDataScript:
+    Type: String
+    Description: bootstrap 脚本（明文，ROS 会自动 base64 编码）
+    Default: |
+      #!/bin/bash
+      echo "no userdata provided" > /var/log/qianwenyun-bootstrap.log
+
+Resources:
+  Vpc:
+    Type: ALIYUN::ECS::VPC
+    Properties:
+      VpcName:
+        Fn::Sub: qianwenyun-${AppName}-vpc
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: from
+          Value: qianwenyun
+        - Key: qianwenyun-appName
+          Value:
+            Ref: AppName
+
+  VSwitch:
+    Type: ALIYUN::ECS::VSwitch
+    Properties:
+      VpcId:
+        Ref: Vpc
+      ZoneId:
+        Ref: ZoneId
+      CidrBlock: 10.0.1.0/24
+      VSwitchName:
+        Fn::Sub: qianwenyun-${AppName}-vsw
+      Tags:
+        - Key: from
+          Value: qianwenyun
+
+  SecurityGroup:
+    Type: ALIYUN::ECS::SecurityGroup
+    Properties:
+      SecurityGroupName:
+        Fn::Sub: qianwenyun-${AppName}-sg
+      VpcId:
+        Ref: Vpc
+      SecurityGroupIngress:
+        # WARNING: SSH 对公网开放，部署完成后建议收窄为具体 IP 或 VPN 网段
+        - PortRange: 22/22
+          Priority: 1
+          IpProtocol: tcp
+          SourceCidrIp: 0.0.0.0/0
+          NicType: intranet
+        - PortRange: 80/80
+          Priority: 1
+          IpProtocol: tcp
+          SourceCidrIp: 0.0.0.0/0
+          NicType: intranet
+        - PortRange: 443/443
+          Priority: 1
+          IpProtocol: tcp
+          SourceCidrIp: 0.0.0.0/0
+          NicType: intranet
+      Tags:
+        - Key: from
+          Value: qianwenyun
+
+  EcsInstance:
+    Type: ALIYUN::ECS::InstanceGroup
+    Properties:
+      ImageId:
+        Ref: ImageId
+      InstanceType:
+        Ref: InstanceType
+      InstanceChargeType: PostPaid
+      Password:
+        Ref: Password
+      SecurityGroupId:
+        Ref: SecurityGroup
+      VSwitchId:
+        Ref: VSwitch
+      VpcId:
+        Ref: Vpc
+      InstanceName:
+        Fn::Sub: qianwenyun-${AppName}-ecs-[1,2]
+      HostName:
+        Fn::Sub: qianwenyun-${AppName}-ecs-[1,2]
+      MaxAmount: 1
+      MinAmount: 1
+      SystemDiskCategory: cloud_essd
+      SystemDiskSize:
+        Ref: SystemDiskSize
+      AllocatePublicIP: false
+      UserData:
+        Ref: UserDataScript
+      Tags:
+        - Key: from
+          Value: qianwenyun
+        - Key: qianwenyun-appName
+          Value:
+            Ref: AppName
+
+  Eip:
+    Type: ALIYUN::VPC::EIP
+    Properties:
+      Name:
+        Fn::Sub: qianwenyun-${AppName}-eip
+      InternetChargeType: PayByTraffic
+      Bandwidth: 5
+      Tags:
+        - Key: from
+          Value: qianwenyun
+
+  EipAssoc:
+    Type: ALIYUN::VPC::EIPAssociation
+    Properties:
+      AllocationId:
+        Ref: Eip
+      InstanceId:
+        Fn::Select:
+          - 0
+          - Fn::GetAtt:
+              - EcsInstance
+              - InstanceIds
+
+Outputs:
+  PublicIp:
+    Description: 公网访问 IP（前端 http://<IP>/，后端 http://<IP>/api/）
+    Value:
+      Fn::GetAtt:
+        - Eip
+        - EipAddress
+  EcsInstanceIds:
+    Description: ECS 实例 ID 列表
+    Value:
+      Fn::GetAtt:
+        - EcsInstance
+        - InstanceIds
+  EcsPrivateIps:
+    Description: ECS 内网 IP 列表
+    Value:
+      Fn::GetAtt:
+        - EcsInstance
+        - PrivateIps
+  StackName:
+    Value:
+      Ref: ALIYUN::StackName
