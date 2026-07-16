@@ -78,15 +78,15 @@ aliyun ros GetTemplateEstimateCost \
 ```bash
 aliyun ros CreateStack \
   --RegionId cn-hangzhou \
-  --StackName qianwenyun-myapp-202606081230 \
+  --StackName qianwenai-myapp-202606081230 \
   --TemplateBody "$(cat template.yaml)" \
   --DisableRollback false \
   --TimeoutInMinutes 30 \
   --Tags.1.Key from \
-  --Tags.1.Value qianwenyun \
-  --Tags.2.Key qianwenyun-appName \
+  --Tags.1.Value qianwenai \
+  --Tags.2.Key qianwenai-appName \
   --Tags.2.Value myapp \
-  --Tags.3.Key qianwenyun-appDesc \
+  --Tags.3.Key qianwenai-appDesc \
   --Tags.3.Value '我的应用描述' \
   --Parameters.1.ParameterKey AppName --Parameters.1.ParameterValue myapp \
   --Parameters.2.ParameterKey InstanceType --Parameters.2.ParameterValue "$INSTANCE_TYPE" \
@@ -94,7 +94,7 @@ aliyun ros CreateStack \
   --Parameters.4.ParameterKey UserDataScript --Parameters.4.ParameterValue "$(cat /tmp/userdata.sh)"
 ```
 
-返回 `{"StackId":"..."}`。**Tags 必带 `from=qianwenyun`**。**DisableRollback 必为 false**（失败自动回滚）。
+返回 `{"StackId":"..."}`。**Tags 必带 `from=qianwenai`**。**DisableRollback 必为 false**（失败自动回滚）。
 
 ### GetStack（轮询状态）
 
@@ -150,33 +150,33 @@ aliyun ecs DescribeImages \
 ### 创建临时桶（带 7 天过期 lifecycle）
 
 ```bash
-aliyun oss mb oss://qianwenyun-deploy-tmp-<random>/ --region cn-hangzhou
+aliyun oss mb oss://qianwenai-deploy-tmp-<random>/ --region cn-hangzhou
 # lifecycle 通过 ossutil 或 PutBucketLifecycle 设置
 ```
 
 ### 上传产物
 
 ```bash
-aliyun oss cp /tmp/frontend.tar.gz oss://qianwenyun-deploy-tmp-xxx/frontend.tar.gz
+aliyun oss cp /tmp/frontend.tar.gz oss://qianwenai-deploy-tmp-xxx/frontend.tar.gz
 ```
 
 ### 生成签名 URL（UserData 使用）
 
 ```bash
-aliyun oss sign oss://qianwenyun-deploy-tmp-xxx/frontend.tar.gz --timeout 86400
+aliyun oss sign oss://qianwenai-deploy-tmp-xxx/frontend.tar.gz --timeout 86400
 # 输出可直接 curl 下载的 https URL（24 小时有效）
 ```
 
 ### 清理桶（删除栈时同步）
 
 ```bash
-aliyun oss rm oss://qianwenyun-deploy-tmp-xxx/ -r -f
-aliyun oss rb oss://qianwenyun-deploy-tmp-xxx/ -f
+aliyun oss rm oss://qianwenai-deploy-tmp-xxx/ -r -f
+aliyun oss rb oss://qianwenai-deploy-tmp-xxx/ -f
 ```
 
 ## 登服务器排查（探活第二关失败 / 502 时）
 
-要看的两个日志：`/var/log/qianwenyun-bootstrap.log`（UserData 引导过程）、`/var/log/qianwenyun-app.log`（应用 stdout/stderr）。
+要看的两个日志：`/var/log/qianwenai-bootstrap.log`（UserData 引导过程）、`/var/log/qianwenai-app.log`（应用 stdout/stderr）。
 
 ### 首选：Cloud Assistant RunCommand（免 SSH，单机 / HA 通用）
 
@@ -186,7 +186,7 @@ ECS 自带云助手，直接下发 shell，无需开 22 端口、无需密码：
 # 1. 下发（CommandContent 用 base64，避免引号/换行被吃掉）
 CID=$(PAGER=cat aliyun ecs RunCommand \
   --RegionId cn-hangzhou --InstanceId.1 <ECS_INSTANCE_ID> --Type RunShellScript \
-  --CommandContent "$(printf '%s' 'systemctl status qianwenyun-app --no-pager; echo ---; tail -n 100 /var/log/qianwenyun-app.log' | base64)" \
+  --CommandContent "$(printf '%s' 'systemctl status qianwenai-app --no-pager; echo ---; tail -n 100 /var/log/qianwenai-app.log' | base64)" \
   | python3 -c 'import sys,json;print(json.load(sys.stdin)["InvokeId"])')
 
 # 2. 取结果（异步，先 sleep）
@@ -195,7 +195,7 @@ PAGER=cat aliyun ecs DescribeInvocations --RegionId cn-hangzhou --InvokeId "$CID
   --query 'Invocations.Invocation[0].InvokeInstances.InvokeInstance[0].Output' --output text | base64 -d
 ```
 
-`<ECS_INSTANCE_ID>` 取自 `ListStackResources` 里 `ResourceType=ALIYUN::ECS::Instance` 的 `PhysicalResourceId`。排查→改配置→`systemctl restart qianwenyun-app`→重新探活，全程都可走 RunCommand。
+`<ECS_INSTANCE_ID>` 取自 `ListStackResources` 里 `ResourceType=ALIYUN::ECS::Instance` 的 `PhysicalResourceId`。排查→改配置→`systemctl restart qianwenai-app`→重新探活，全程都可走 RunCommand。
 
 ### 备选：SSH（仅单机、需交互式 shell 时）
 
@@ -204,9 +204,9 @@ PAGER=cat aliyun ecs DescribeInvocations --RegionId cn-hangzhou --InvokeId "$CID
 ```bash
 # brew install hudochenkov/sshpass/sshpass
 sshpass -p "$ECS_PWD" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-  root@<PUBLIC_IP> "tail -n 100 /var/log/qianwenyun-app.log"
+  root@<PUBLIC_IP> "tail -n 100 /var/log/qianwenai-app.log"
 ```
 
-密码从 `.qianwenyun-deploy.local` 读，**勿回显到聊天**。HA 的 ECS 无公网 IP，SSH 不通，只能走 RunCommand。
+密码从 `.qianwenai-deploy.local` 读，**勿回显到聊天**。HA 的 ECS 无公网 IP，SSH 不通，只能走 RunCommand。
 
 > ⚠️ `aliyun` CLI **没有 `--no-pager` 参数**（传了会报错）。非交互环境用 `PAGER=cat aliyun ...` 关分页。

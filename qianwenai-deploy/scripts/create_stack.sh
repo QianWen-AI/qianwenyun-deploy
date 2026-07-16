@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 创建 ROS 栈。带 from=qianwenyun / qianwenyun-appName / qianwenyun-appDesc tag；失败自动回滚（DisableRollback=false）。
+# 创建 ROS 栈。带 from=qianwenai / qianwenai-appName / qianwenai-appDesc tag；失败自动回滚（DisableRollback=false）。
 # 全栈按量付费（PostPaid），不支持包年包月。
 # 必填环境变量：APP_NAME, INSTANCE_TYPE, PASSWORD, USERDATA_FILE
 # 必填环境变量（续）：APP_DESC（应用描述）
@@ -56,9 +56,9 @@ OUT=$(aliyun ros CreateStack \
   --TemplateURL "$TPL_URL" \
   --DisableRollback false \
   --TimeoutInMinutes "$TIMEOUT" \
-  --Tags.1.Key from                --Tags.1.Value qianwenyun \
-  --Tags.2.Key qianwenyun-appName  --Tags.2.Value "$APP_NAME" \
-  --Tags.3.Key qianwenyun-appDesc  --Tags.3.Value "$APP_DESC" \
+  --Tags.1.Key from                --Tags.1.Value qianwenai \
+  --Tags.2.Key qianwenai-appName  --Tags.2.Value "$APP_NAME" \
+  --Tags.3.Key qianwenai-appDesc  --Tags.3.Value "$APP_DESC" \
   "${PARAMS[@]}" 2>&1)
 CODE=$?
 if [ $CODE -ne 0 ]; then
@@ -84,13 +84,13 @@ state = {
     "stack_name": name,
     "region_id": region,
     "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
-    "tags": [{"Key": "from", "Value": "qianwenyun"}, {"Key": "qianwenyun-appName", "Value": os.environ.get("APP_NAME", "")}, {"Key": "qianwenyun-appDesc", "Value": os.environ.get("APP_DESC", "")}],
+    "tags": [{"Key": "from", "Value": "qianwenai"}, {"Key": "qianwenai-appName", "Value": os.environ.get("APP_NAME", "")}, {"Key": "qianwenai-appDesc", "Value": os.environ.get("APP_DESC", "")}],
     "provisional": True,
     "notes": "CreateStack 已提交，等待终态中；成功后由 record_state.py 覆盖为完整状态。",
 }
 if db:
     state["db_engine"] = db
-path = os.path.join(root, ".qianwenyun-deploy")
+path = os.path.join(root, ".qianwenai-deploy")
 with open(path, "w", encoding="utf-8") as f:
     json.dump(state, f, ensure_ascii=False, indent=2)
 sys.stderr.write(f"[create] 已写入临时状态文件 {path}（含 stack_id，中断后仍可清理）\n")

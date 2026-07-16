@@ -4,7 +4,7 @@
 # 不销毁/重建任何云资源，公网 IP 保持不变。
 #
 # 前置条件：
-#   - 项目根目录存在 .qianwenyun-deploy 状态文件（由首次部署生成）
+#   - 项目根目录存在 .qianwenai-deploy 状态文件（由首次部署生成）
 #   - 新产物已上传到 OSS（由 Agent 调用 upload_artifacts.py 完成后传入 URL）
 #
 # 必填环境变量：
@@ -23,7 +23,7 @@
 set -uo pipefail
 
 ROOT="${PROJECT_ROOT:-.}"
-STATE="$ROOT/.qianwenyun-deploy"
+STATE="$ROOT/.qianwenai-deploy"
 ROLLBACK="${ROLLBACK:-0}"
 
 [ -f "$STATE" ] || { echo "找不到 $STATE，请先完成首次部署" >&2; exit 2; }
@@ -102,23 +102,23 @@ fi
 gen_update_script() {
   local script="#!/bin/bash
 set -euxo pipefail
-exec >> /var/log/qianwenyun-update.log 2>&1
-echo \"[\$(date -u +%FT%TZ)] === qianwenyun update start ===\"
+exec >> /var/log/qianwenai-update.log 2>&1
+echo \"[\$(date -u +%FT%TZ)] === qianwenai update start ===\"
 
 rollback_and_exit() {
   echo '[update] 更新失败，执行回滚'
   trap - ERR
-  if [ -d /opt/qianwenyun.bak ]; then
-    rm -rf /opt/qianwenyun
-    mv /opt/qianwenyun.bak /opt/qianwenyun
+  if [ -d /opt/qianwenai.bak ]; then
+    rm -rf /opt/qianwenai
+    mv /opt/qianwenai.bak /opt/qianwenai
   fi
   if [ -d /var/www/frontend.bak ]; then
     rm -rf /var/www/frontend
     mv /var/www/frontend.bak /var/www/frontend
     nginx -t && systemctl reload nginx || true
   fi
-  systemctl restart qianwenyun-app || true
-  rm -rf /opt/qianwenyun.staging /var/www/frontend.staging 2>/dev/null || true
+  systemctl restart qianwenai-app || true
+  rm -rf /opt/qianwenai.staging /var/www/frontend.staging 2>/dev/null || true
   exit 1
 }
 "
@@ -128,7 +128,7 @@ rollback_and_exit() {
 # === 阶段 1：预备——下载、解压、安装依赖（服务继续运行，不影响线上） ===
 echo '[update] 阶段1：下载+验证新产物（服务不受影响）'
 
-STAGING_DIR=/opt/qianwenyun.staging
+STAGING_DIR=/opt/qianwenai.staging
 rm -rf \"\$STAGING_DIR\"
 mkdir -p \"\$STAGING_DIR\"
 
@@ -147,8 +147,8 @@ echo '[update] 新产物下载+解压成功'
 cd \"\$STAGING_DIR\"
 if [ -f requirements.txt ]; then
   echo '[update] 预下载 Python 依赖包（服务不受影响）'
-  mkdir -p /tmp/qianwenyun-pip-cache
-  python3 -m pip download -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com -d /tmp/qianwenyun-pip-cache -r requirements.txt
+  mkdir -p /tmp/qianwenai-pip-cache
+  python3 -m pip download -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com -d /tmp/qianwenai-pip-cache -r requirements.txt
   echo '[update] Python 依赖预下载完成'
 fi
 "
@@ -169,35 +169,35 @@ fi
 # === 阶段 2：原子切换——停服、替换、启动（停机窗口最小化） ===
 echo '[update] 阶段2：新产物已就绪，执行原子切换'
 echo '[update] 备份当前后端'
-cp -a /opt/qianwenyun /opt/qianwenyun.bak
+cp -a /opt/qianwenai /opt/qianwenai.bak
 trap rollback_and_exit ERR
 
 echo '[update] 停止后端服务'
-systemctl stop qianwenyun-app || true
+systemctl stop qianwenai-app || true
 
 echo '[update] 原子替换后端目录'
-rm -rf /opt/qianwenyun
-mv \"\$STAGING_DIR\" /opt/qianwenyun
+rm -rf /opt/qianwenai
+mv \"\$STAGING_DIR\" /opt/qianwenai
 "
     # Python 需要在替换后用已缓存的包做快速离线安装
     case "$APP_TYPE" in
       binary-python)
         script+="
-cd /opt/qianwenyun
-if [ -f requirements.txt ] && [ -d /tmp/qianwenyun-pip-cache ]; then
+cd /opt/qianwenai
+if [ -f requirements.txt ] && [ -d /tmp/qianwenai-pip-cache ]; then
   echo '[update] 离线安装 Python 依赖（使用预下载缓存）'
-  python3 -m pip install --no-cache-dir --no-index --find-links /tmp/qianwenyun-pip-cache -r requirements.txt
-  rm -rf /tmp/qianwenyun-pip-cache
+  python3 -m pip install --no-cache-dir --no-index --find-links /tmp/qianwenai-pip-cache -r requirements.txt
+  rm -rf /tmp/qianwenai-pip-cache
 fi
 "
         ;;
     esac
     script+="
 echo '[update] 启动后端服务'
-systemctl restart qianwenyun-app
+systemctl restart qianwenai-app
 
 echo '[update] 健康检查...'
-APP_PORT=\$(sed -n 's/^Environment=PORT=//p' /etc/systemd/system/qianwenyun-app.service 2>/dev/null | head -1)
+APP_PORT=\$(sed -n 's/^Environment=PORT=//p' /etc/systemd/system/qianwenai-app.service 2>/dev/null | head -1)
 APP_PORT=\${APP_PORT:-8080}
 sleep 3
 HEALTHY=0
@@ -245,8 +245,8 @@ echo '[update] 前端更新完成'
 
   script+="
 trap - ERR
-rm -rf /opt/qianwenyun.bak /var/www/frontend.bak /opt/qianwenyun.staging /var/www/frontend.staging /tmp/qianwenyun-pip-cache 2>/dev/null || true
-echo \"[\$(date -u +%FT%TZ)] === qianwenyun update complete ===\"
+rm -rf /opt/qianwenai.bak /var/www/frontend.bak /opt/qianwenai.staging /var/www/frontend.staging /tmp/qianwenai-pip-cache 2>/dev/null || true
+echo \"[\$(date -u +%FT%TZ)] === qianwenai update complete ===\"
 "
   echo "$script"
 }

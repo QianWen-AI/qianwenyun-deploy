@@ -1,5 +1,5 @@
 ROSTemplateFormatVersion: '2015-09-01'
-Description: 'qianwenyun HA deployment: 2 ECS across 2 AZs + public SLB + VPC. SLB
+Description: 'qianwenai HA deployment: 2 ECS across 2 AZs + public SLB + VPC. SLB
   public IP as the single entrypoint (port 80 -> backend port 80 on each ECS Nginx).'
 Parameters:
   AppName:
@@ -41,7 +41,7 @@ Parameters:
     Description: bootstrap 脚本（明文，ROS 会自动 base64 编码）
     Default: '#!/bin/bash
 
-      echo "no userdata provided" > /var/log/qianwenyun-bootstrap.log
+      echo "no userdata provided" > /var/log/qianwenai-bootstrap.log
 
       '
 Resources:
@@ -49,12 +49,12 @@ Resources:
     Type: ALIYUN::ECS::VPC
     Properties:
       VpcName:
-        Fn::Sub: qianwenyun-${AppName}-vpc
+        Fn::Sub: qianwenai-${AppName}-vpc
       CidrBlock: 10.0.0.0/16
       Tags:
       - Key: from
-        Value: qianwenyun
-      - Key: qianwenyun-appName
+        Value: qianwenai
+      - Key: qianwenai-appName
         Value:
           Ref: AppName
   VSwitchA:
@@ -66,10 +66,10 @@ Resources:
         Ref: ZoneIdA
       CidrBlock: 10.0.1.0/24
       VSwitchName:
-        Fn::Sub: qianwenyun-${AppName}-vsw-a
+        Fn::Sub: qianwenai-${AppName}-vsw-a
       Tags:
       - Key: from
-        Value: qianwenyun
+        Value: qianwenai
   VSwitchB:
     Type: ALIYUN::ECS::VSwitch
     Properties:
@@ -79,15 +79,15 @@ Resources:
         Ref: ZoneIdB
       CidrBlock: 10.0.2.0/24
       VSwitchName:
-        Fn::Sub: qianwenyun-${AppName}-vsw-b
+        Fn::Sub: qianwenai-${AppName}-vsw-b
       Tags:
       - Key: from
-        Value: qianwenyun
+        Value: qianwenai
   SecurityGroup:
     Type: ALIYUN::ECS::SecurityGroup
     Properties:
       SecurityGroupName:
-        Fn::Sub: qianwenyun-${AppName}-sg
+        Fn::Sub: qianwenai-${AppName}-sg
       VpcId:
         Ref: Vpc
       SecurityGroupIngress:
@@ -109,7 +109,7 @@ Resources:
         NicType: intranet
       Tags:
       - Key: from
-        Value: qianwenyun
+        Value: qianwenai
   EcsA:
     Type: ALIYUN::ECS::InstanceGroup
     Properties:
@@ -129,9 +129,9 @@ Resources:
       ZoneId:
         Ref: ZoneIdA
       InstanceName:
-        Fn::Sub: qianwenyun-${AppName}-ecs-a
+        Fn::Sub: qianwenai-${AppName}-ecs-a
       HostName:
-        Fn::Sub: qianwenyun-${AppName}-ecs-a
+        Fn::Sub: qianwenai-${AppName}-ecs-a
       MaxAmount: 1
       MinAmount: 1
       SystemDiskCategory: cloud_essd
@@ -142,8 +142,8 @@ Resources:
         Ref: UserDataScript
       Tags:
       - Key: from
-        Value: qianwenyun
-      - Key: qianwenyun-appName
+        Value: qianwenai
+      - Key: qianwenai-appName
         Value:
           Ref: AppName
   EcsB:
@@ -165,9 +165,9 @@ Resources:
       ZoneId:
         Ref: ZoneIdB
       InstanceName:
-        Fn::Sub: qianwenyun-${AppName}-ecs-b
+        Fn::Sub: qianwenai-${AppName}-ecs-b
       HostName:
-        Fn::Sub: qianwenyun-${AppName}-ecs-b
+        Fn::Sub: qianwenai-${AppName}-ecs-b
       MaxAmount: 1
       MinAmount: 1
       SystemDiskCategory: cloud_essd
@@ -178,15 +178,15 @@ Resources:
         Ref: UserDataScript
       Tags:
       - Key: from
-        Value: qianwenyun
-      - Key: qianwenyun-appName
+        Value: qianwenai
+      - Key: qianwenai-appName
         Value:
           Ref: AppName
   Slb:
     Type: ALIYUN::SLB::LoadBalancer
     Properties:
       LoadBalancerName:
-        Fn::Sub: qianwenyun-${AppName}-slb
+        Fn::Sub: qianwenai-${AppName}-slb
       AddressType: internet
       LoadBalancerSpec:
         Ref: SlbSpec
@@ -195,8 +195,8 @@ Resources:
         Ref: Vpc
       Tags:
       - Key: from
-        Value: qianwenyun
-      - Key: qianwenyun-appName
+        Value: qianwenai
+      - Key: qianwenai-appName
         Value:
           Ref: AppName
   SlbListenerHttp:

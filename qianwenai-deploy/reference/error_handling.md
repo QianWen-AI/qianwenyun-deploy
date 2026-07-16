@@ -11,8 +11,8 @@
 | `InsufficientStock` | 库存不足 | 给 2-3 个替代方案（更大规格 / 换地域 / HA 退单机） |
 | `InvalidParameter` | 密码不合格 | 重新生成强密码 |
 | 栈回滚 `ROLLBACK_COMPLETE` | 资源创建失败 | `ListStackResources` 定位出错资源 |
-| 探活失败但栈成功 | UserData 未跑完 / 应用未启动 | 查 `/var/log/qianwenyun-bootstrap.log` |
-| `/healthz` 通但 `/` 返回 502 | 后端崩了，Nginx 掩盖故障 | 查 `/var/log/qianwenyun-app.log` |
+| 探活失败但栈成功 | UserData 未跑完 / 应用未启动 | 查 `/var/log/qianwenai-bootstrap.log` |
+| `/healthz` 通但 `/` 返回 502 | 后端崩了，Nginx 掩盖故障 | 查 `/var/log/qianwenai-app.log` |
 | `DELETE_FAILED` | 资源被外部占用 | ROS 控制台手动清理 |
 | 密码丢失 | `.local` 文件误删 | ECS/RDS 控制台重置密码 |
 | RunCommand 超时 | 云助手未响应 | 检查 ECS 状态和 `DescribeCloudAssistantStatus` |
@@ -30,12 +30,12 @@
 - ROS 必须用 `--TemplateURL`（`--TemplateBody` 被 WAF 拦截）
 - 可用区必须从 `check_stock.sh` 获取
 - SLB 不传 `VSwitchId`（否则强制内网类型）
-- `DisableRollback=false` 和 `from=qianwenyun` tag 必带
+- `DisableRollback=false` 和 `from=qianwenai` tag 必带
 - 禁止跳过 `ValidateTemplate`
 
 **产物与 OSS**：
 - 产物 URL 必须用内网端点（HA 的 ECS 无公网 IP）
-- 临时桶记录在 `.qianwenyun-deploy` 中，`delete_stack.sh` 依赖它清理
+- 临时桶记录在 `.qianwenai-deploy` 中，`delete_stack.sh` 依赖它清理
 
 **密码**：
 - 特殊字符仅 `!@%^*+=_-`（`& # $ | ;` 会破坏 `db.env` source）

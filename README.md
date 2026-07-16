@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/QianWen-AI/qianwenyun-deploy/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" /></a>
-  <a href="https://github.com/QianWen-AI/qianwenyun-deploy/stargazers"><img src="https://img.shields.io/github/stars/QianWen-AI/qianwenyun-deploy?style=social" alt="Stars" /></a>
+  <a href="https://github.com/QianWen-AI/qianwenai-deploy/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" /></a>
+  <a href="https://github.com/QianWen-AI/qianwenai-deploy/stargazers"><img src="https://img.shields.io/github/stars/QianWen-AI/qianwenai-deploy?style=social" alt="Stars" /></a>
   <a href="https://agentskills.io"><img src="https://img.shields.io/badge/Agent%20Skills-compatible-brightgreen.svg" alt="Agent Skills" /></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-blue.svg" alt="Node.js" /></a>
 </p>
@@ -85,7 +85,7 @@
 ### 安装
 
 ```bash
-npx skills add QianWen-AI/qianwenyun-deploy
+npx skills add QianWen-AI/qianwenai-deploy
 ```
 
 ### 交给 Agent 完成（推荐）
@@ -133,7 +133,7 @@ npx skills add QianWen-AI/qianwenyun-deploy
 
 欢迎参与项目建设！你可以通过以下方式贡献：
 
-- **反馈 Bug** — 如果遇到问题，请[提交 Issue](https://github.com/QianWen-AI/qianwenyun-deploy/issues) 并附上复现步骤。
+- **反馈 Bug** — 如果遇到问题，请[提交 Issue](https://github.com/QianWen-AI/qianwenai-deploy/issues) 并附上复现步骤。
 - **提出需求** — 如果对新功能或现有功能改进有想法，欢迎提交 Feature Request。
 - **提交 PR** — Fork 仓库并新建分支，完成修改后提交 Pull Request。
 - **完善文档** — 无论是修正错别字、优化表述，还是补充更好的示例，我们都非常欢迎。

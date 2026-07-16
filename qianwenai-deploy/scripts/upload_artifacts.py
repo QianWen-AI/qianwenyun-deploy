@@ -3,7 +3,7 @@
 把本地构建产物（前端 dist + 后端 docker image / binary 等）打包并上传到一个临时 OSS 桶，
 然后生成 24h 有效的签名 URL，供 ECS UserData 拉取。
 
-桶名形如 `qianwenyun-deploy-tmp-<6位随机>`，统一带 `from=qianwenyun` tag，
+桶名形如 `qianwenai-deploy-tmp-<6位随机>`，统一带 `from=qianwenai` tag，
 并设置 7 天过期 lifecycle（防止遗忘清理产生费用）。
 
 用法：
@@ -13,7 +13,7 @@
     --backend-mode docker-image \
     --backend-dir backend \
     --backend-image-name myapp:latest \
-    [--bucket qianwenyun-deploy-tmp-abc123]   # 复用已有桶；不传则新建
+    [--bucket qianwenai-deploy-tmp-abc123]   # 复用已有桶；不传则新建
 
 输出（stdout 一行 JSON）：
   {"bucket": "...", "frontend_url": "...|null", "backend_url": "...|null"}
@@ -58,7 +58,7 @@ def aliyun(*args, capture=False):
 def ensure_bucket(region: str, bucket: str | None) -> str:
     created = False
     if not bucket:
-        bucket = f"qianwenyun-deploy-tmp-{uuid.uuid4().hex[:6]}"
+        bucket = f"qianwenai-deploy-tmp-{uuid.uuid4().hex[:6]}"
     # mb 不是幂等的：桶已存在会报错。区分「新建成功 / 已存在(复用) / 真失败」三种情况，
     # 只有真正新建时才打 tag、设 lifecycle（复用老桶时它们已经存在）。
     r = subprocess.run(["aliyun", "oss", "mb", f"oss://{bucket}/", "--region", region],
@@ -83,7 +83,7 @@ def ensure_bucket(region: str, bucket: str | None) -> str:
 def _set_bucket_tag(bucket: str):
     subprocess.run(
         ["aliyun", "oss", "bucket-tagging", "--method", "put",
-         f"oss://{bucket}/", "from#qianwenyun"],
+         f"oss://{bucket}/", "from#qianwenai"],
         capture_output=True, text=True)
 
 
@@ -180,7 +180,7 @@ def main():
     internal = not args.no_internal
     out = {"bucket": bucket, "frontend_url": None, "backend_url": None, "template_url": None}
 
-    with tempfile.TemporaryDirectory(prefix="qianwenyun-pack-") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="qianwenai-pack-") as tmpdir:
         tmp = Path(tmpdir)
 
         # 前端

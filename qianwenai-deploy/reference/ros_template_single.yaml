@@ -1,5 +1,5 @@
 ROSTemplateFormatVersion: '2015-09-01'
-Description: 'qianwenyun single-host deployment: 1 ECS + EIP + VPC + SecurityGroup. Frontend Nginx + backend service co-located on one VM.'
+Description: 'qianwenai single-host deployment: 1 ECS + EIP + VPC + SecurityGroup. Frontend Nginx + backend service co-located on one VM.'
 
 Parameters:
   AppName:
@@ -38,19 +38,19 @@ Parameters:
     Description: bootstrap 脚本（明文，ROS 会自动 base64 编码）
     Default: |
       #!/bin/bash
-      echo "no userdata provided" > /var/log/qianwenyun-bootstrap.log
+      echo "no userdata provided" > /var/log/qianwenai-bootstrap.log
 
 Resources:
   Vpc:
     Type: ALIYUN::ECS::VPC
     Properties:
       VpcName:
-        Fn::Sub: qianwenyun-${AppName}-vpc
+        Fn::Sub: qianwenai-${AppName}-vpc
       CidrBlock: 10.0.0.0/16
       Tags:
         - Key: from
-          Value: qianwenyun
-        - Key: qianwenyun-appName
+          Value: qianwenai
+        - Key: qianwenai-appName
           Value:
             Ref: AppName
 
@@ -63,16 +63,16 @@ Resources:
         Ref: ZoneId
       CidrBlock: 10.0.1.0/24
       VSwitchName:
-        Fn::Sub: qianwenyun-${AppName}-vsw
+        Fn::Sub: qianwenai-${AppName}-vsw
       Tags:
         - Key: from
-          Value: qianwenyun
+          Value: qianwenai
 
   SecurityGroup:
     Type: ALIYUN::ECS::SecurityGroup
     Properties:
       SecurityGroupName:
-        Fn::Sub: qianwenyun-${AppName}-sg
+        Fn::Sub: qianwenai-${AppName}-sg
       VpcId:
         Ref: Vpc
       SecurityGroupIngress:
@@ -94,7 +94,7 @@ Resources:
           NicType: intranet
       Tags:
         - Key: from
-          Value: qianwenyun
+          Value: qianwenai
 
   EcsInstance:
     Type: ALIYUN::ECS::InstanceGroup
@@ -113,9 +113,9 @@ Resources:
       VpcId:
         Ref: Vpc
       InstanceName:
-        Fn::Sub: qianwenyun-${AppName}-ecs-[1,2]
+        Fn::Sub: qianwenai-${AppName}-ecs-[1,2]
       HostName:
-        Fn::Sub: qianwenyun-${AppName}-ecs-[1,2]
+        Fn::Sub: qianwenai-${AppName}-ecs-[1,2]
       MaxAmount: 1
       MinAmount: 1
       SystemDiskCategory: cloud_essd
@@ -126,8 +126,8 @@ Resources:
         Ref: UserDataScript
       Tags:
         - Key: from
-          Value: qianwenyun
-        - Key: qianwenyun-appName
+          Value: qianwenai
+        - Key: qianwenai-appName
           Value:
             Ref: AppName
 
@@ -135,12 +135,12 @@ Resources:
     Type: ALIYUN::VPC::EIP
     Properties:
       Name:
-        Fn::Sub: qianwenyun-${AppName}-eip
+        Fn::Sub: qianwenai-${AppName}-eip
       InternetChargeType: PayByTraffic
       Bandwidth: 5
       Tags:
         - Key: from
-          Value: qianwenyun
+          Value: qianwenai
 
   EipAssoc:
     Type: ALIYUN::VPC::EIPAssociation

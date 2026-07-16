@@ -1,5 +1,5 @@
 ROSTemplateFormatVersion: '2015-09-01'
-Description: 'qianwenyun HA + RDS MySQL: 2 ECS across 2 AZs + public SLB + VPC + RDS MySQL (single-AZ in v1).'
+Description: 'qianwenai HA + RDS MySQL: 2 ECS across 2 AZs + public SLB + VPC + RDS MySQL (single-AZ in v1).'
 Parameters:
   AppName:
     Type: String
@@ -60,13 +60,13 @@ Resources:
     Type: ALIYUN::ECS::VPC
     Properties:
       VpcName:
-        Fn::Sub: qianwenyun-${AppName}-vpc
+        Fn::Sub: qianwenai-${AppName}-vpc
       CidrBlock: 10.0.0.0/16
       Tags:
         - Key: from
-          Value: qianwenyun
+          Value: qianwenai
         - Key:
-            qianwenyun-appName
+            qianwenai-appName
           Value:
             Ref: AppName
   VSwitchA:
@@ -78,10 +78,10 @@ Resources:
         Ref: ZoneIdA
       CidrBlock: 10.0.1.0/24
       VSwitchName:
-        Fn::Sub: qianwenyun-${AppName}-vsw-a
+        Fn::Sub: qianwenai-${AppName}-vsw-a
       Tags:
         - Key: from
-          Value: qianwenyun
+          Value: qianwenai
   VSwitchB:
     Type: ALIYUN::ECS::VSwitch
     Properties:
@@ -91,15 +91,15 @@ Resources:
         Ref: ZoneIdB
       CidrBlock: 10.0.2.0/24
       VSwitchName:
-        Fn::Sub: qianwenyun-${AppName}-vsw-b
+        Fn::Sub: qianwenai-${AppName}-vsw-b
       Tags:
         - Key: from
-          Value: qianwenyun
+          Value: qianwenai
   SecurityGroup:
     Type: ALIYUN::ECS::SecurityGroup
     Properties:
       SecurityGroupName:
-        Fn::Sub: qianwenyun-${AppName}-sg
+        Fn::Sub: qianwenai-${AppName}-sg
       VpcId:
         Ref: Vpc
       SecurityGroupIngress:
@@ -121,7 +121,7 @@ Resources:
           NicType: intranet
       Tags:
         - Key: from
-          Value: qianwenyun
+          Value: qianwenai
   RdsInstance:
     Type: ALIYUN::RDS::DBInstance
     Properties:
@@ -134,7 +134,7 @@ Resources:
       DBInstanceStorageType: cloud_essd
       PayType: Postpaid
       DBInstanceDescription:
-        Fn::Sub: qianwenyun-${AppName}-rds
+        Fn::Sub: qianwenai-${AppName}-rds
       VpcId:
         Ref: Vpc
       VSwitchId:
@@ -144,7 +144,7 @@ Resources:
       SecurityIPList: 10.0.0.0/16
       DeletionProtection: false
       Tags:
-        from: qianwenyun
+        from: qianwenai
   RdsDatabase:
     Type: ALIYUN::RDS::Database
     Properties:
@@ -195,9 +195,9 @@ Resources:
       ZoneId:
         Ref: ZoneIdA
       InstanceName:
-        Fn::Sub: qianwenyun-${AppName}-ecs-a
+        Fn::Sub: qianwenai-${AppName}-ecs-a
       HostName:
-        Fn::Sub: qianwenyun-${AppName}-ecs-a
+        Fn::Sub: qianwenai-${AppName}-ecs-a
       MaxAmount: 1
       MinAmount: 1
       SystemDiskCategory: cloud_essd
@@ -209,11 +209,11 @@ Resources:
           - |
             #!/bin/bash
             set -euxo pipefail
-            exec >> /var/log/qianwenyun-bootstrap.log 2>&1
-            echo "[$(date -u +%FT%TZ)] === qianwenyun bootstrap (with RDS) start ==="
+            exec >> /var/log/qianwenai-bootstrap.log 2>&1
+            echo "[$(date -u +%FT%TZ)] === qianwenai bootstrap (with RDS) start ==="
 
-            mkdir -p /etc/qianwenyun
-            cat > /etc/qianwenyun/db.env <<DBENV
+            mkdir -p /etc/qianwenai
+            cat > /etc/qianwenai/db.env <<DBENV
             DATABASE_URL="mysql://${DbAccount}:${DbPassword}@${RdsAddr}:${RdsPort}/${DbName}"
             DB_HOST="${RdsAddr}"
             DB_PORT="${RdsPort}"
@@ -221,10 +221,10 @@ Resources:
             DB_USER="${DbAccount}"
             DB_PASSWORD="${DbPassword}"
             DBENV
-            chmod 600 /etc/qianwenyun/db.env
+            chmod 600 /etc/qianwenai/db.env
 
             set -a
-            . /etc/qianwenyun/db.env
+            . /etc/qianwenai/db.env
             set +a
 
             __USERDATA_BODY__
@@ -234,9 +234,9 @@ Resources:
               Fn::GetAtt: [RdsInstance, InnerPort]
       Tags:
         - Key: from
-          Value: qianwenyun
+          Value: qianwenai
         - Key:
-            qianwenyun-appName
+            qianwenai-appName
           Value:
             Ref: AppName
     DependsOn: RdsAccountPrivilege
@@ -259,9 +259,9 @@ Resources:
       ZoneId:
         Ref: ZoneIdB
       InstanceName:
-        Fn::Sub: qianwenyun-${AppName}-ecs-b
+        Fn::Sub: qianwenai-${AppName}-ecs-b
       HostName:
-        Fn::Sub: qianwenyun-${AppName}-ecs-b
+        Fn::Sub: qianwenai-${AppName}-ecs-b
       MaxAmount: 1
       MinAmount: 1
       SystemDiskCategory: cloud_essd
@@ -273,11 +273,11 @@ Resources:
           - |
             #!/bin/bash
             set -euxo pipefail
-            exec >> /var/log/qianwenyun-bootstrap.log 2>&1
-            echo "[$(date -u +%FT%TZ)] === qianwenyun bootstrap (with RDS) start ==="
+            exec >> /var/log/qianwenai-bootstrap.log 2>&1
+            echo "[$(date -u +%FT%TZ)] === qianwenai bootstrap (with RDS) start ==="
 
-            mkdir -p /etc/qianwenyun
-            cat > /etc/qianwenyun/db.env <<DBENV
+            mkdir -p /etc/qianwenai
+            cat > /etc/qianwenai/db.env <<DBENV
             DATABASE_URL="mysql://${DbAccount}:${DbPassword}@${RdsAddr}:${RdsPort}/${DbName}"
             DB_HOST="${RdsAddr}"
             DB_PORT="${RdsPort}"
@@ -285,10 +285,10 @@ Resources:
             DB_USER="${DbAccount}"
             DB_PASSWORD="${DbPassword}"
             DBENV
-            chmod 600 /etc/qianwenyun/db.env
+            chmod 600 /etc/qianwenai/db.env
 
             set -a
-            . /etc/qianwenyun/db.env
+            . /etc/qianwenai/db.env
             set +a
 
             __USERDATA_BODY__
@@ -298,9 +298,9 @@ Resources:
               Fn::GetAtt: [RdsInstance, InnerPort]
       Tags:
         - Key: from
-          Value: qianwenyun
+          Value: qianwenai
         - Key:
-            qianwenyun-appName
+            qianwenai-appName
           Value:
             Ref: AppName
     DependsOn: RdsAccountPrivilege
@@ -308,7 +308,7 @@ Resources:
     Type: ALIYUN::SLB::LoadBalancer
     Properties:
       LoadBalancerName:
-        Fn::Sub: qianwenyun-${AppName}-slb
+        Fn::Sub: qianwenai-${AppName}-slb
       AddressType: internet
       LoadBalancerSpec:
         Ref: SlbSpec
@@ -317,9 +317,9 @@ Resources:
         Ref: Vpc
       Tags:
         - Key: from
-          Value: qianwenyun
+          Value: qianwenai
         - Key:
-            qianwenyun-appName
+            qianwenai-appName
           Value:
             Ref: AppName
   SlbListenerHttp:

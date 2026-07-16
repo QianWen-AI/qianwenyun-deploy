@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-写入 .qianwenyun-deploy 状态文件（项目根目录）。
+写入 .qianwenai-deploy 状态文件（项目根目录）。
 schema 见 reference/deploy_state_schema.json。
 
 用法（全栈部署）：
@@ -10,15 +10,15 @@ schema 见 reference/deploy_state_schema.json。
     --outputs-json '{"PublicIp":"47.x.x.x","EcsInstanceIds":"i-xxx,i-yyy","SlbId":"lb-xxx",
                      "DbInstanceId":"rm-xxx","DbConnectionAddress":"rm-xxx.mysql.rds.aliyuncs.com",
                      "DbPort":"3306","DbAccount":"appuser"}' \
-    [--artifact-bucket qianwenyun-deploy-tmp-xxx] \
+    [--artifact-bucket qianwenai-deploy-tmp-xxx] \
     [--frontend-dir dist] [--backend-dir backend] \
     [--with-rds] [--db-engine mysql]
 
 密码通过环境变量传入（不走命令行，避免在 `ps` 进程列表泄露明文）：
-  PASSWORD      ECS 登录密码 → 写入 .qianwenyun-deploy.local
-  DB_PASSWORD   RDS 账号密码 → 写入 .qianwenyun-deploy.local（含 RDS 时）
+  PASSWORD      ECS 登录密码 → 写入 .qianwenai-deploy.local
+  DB_PASSWORD   RDS 账号密码 → 写入 .qianwenai-deploy.local（含 RDS 时）
 
-输出：.qianwenyun-deploy 路径
+输出：.qianwenai-deploy 路径
 """
 from __future__ import annotations
 
@@ -83,7 +83,7 @@ def main():
         "frontend_dir": args.frontend_dir,
         "backend_dir": args.backend_dir,
         "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "tags": [{"Key": "from", "Value": "qianwenyun"}],
+        "tags": [{"Key": "from", "Value": "qianwenai"}],
         "outputs": {
             "public_ip": public_ip,
             "ecs_instance_ids": ecs_ids,
@@ -111,11 +111,11 @@ def main():
             state["current_artifact_urls"] = current
 
     root = Path(args.project_root).resolve()
-    state_path = root / ".qianwenyun-deploy"
+    state_path = root / ".qianwenai-deploy"
     state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
 
     if ecs_password or db_password:
-        local_path = root / ".qianwenyun-deploy.local"
+        local_path = root / ".qianwenai-deploy.local"
         local_data = {"stack_id": args.stack_id,
                       "warning": "本文件含密码，请勿提交版本库"}
         if ecs_password:
@@ -131,7 +131,7 @@ def main():
         existing = gi.read_text(encoding="utf-8") if gi.exists() else ""
         lines = existing.splitlines()
         changed = False
-        for entry in (".qianwenyun-deploy.local",):
+        for entry in (".qianwenai-deploy.local",):
             if entry not in lines:
                 lines.append(entry)
                 changed = True

@@ -1,13 +1,13 @@
 #!/bin/bash
-# qianwenyun · Nginx 全量反代后端（适用于 Flask/Django/Express SSR 等服务端渲染应用）
+# qianwenai · Nginx 全量反代后端（适用于 Flask/Django/Express SSR 等服务端渲染应用）
 # 该片段会被 generate_template.py 注入到 ECS UserData 头部。
 # 占位符（generate_template.py 会替换）：
 #   __BACKEND_PORT__           后端服务监听端口（如 5000）
 set -euxo pipefail
 
-LOG=/var/log/qianwenyun-bootstrap.log
+LOG=/var/log/qianwenai-bootstrap.log
 exec > >(tee -a "$LOG") 2>&1
-echo "[$(date -u +%FT%TZ)] === qianwenyun nginx (proxy) bootstrap start ==="
+echo "[$(date -u +%FT%TZ)] === qianwenai nginx (proxy) bootstrap start ==="
 
 # 1. 安装 Nginx
 if ! command -v nginx >/dev/null 2>&1; then
@@ -19,7 +19,7 @@ if ! command -v nginx >/dev/null 2>&1; then
 fi
 
 # 2. 写站点配置：所有请求反代到后端
-cat > /etc/nginx/conf.d/qianwenyun.conf <<NGINX
+cat > /etc/nginx/conf.d/qianwenai.conf <<NGINX
 server {
     listen 80 default_server;
     server_name _;

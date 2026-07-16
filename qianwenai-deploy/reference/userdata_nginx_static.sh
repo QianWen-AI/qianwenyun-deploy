@@ -1,13 +1,13 @@
 #!/bin/bash
-# qianwenyun · Nginx 纯静态托管（无后端反代）
+# qianwenai · Nginx 纯静态托管（无后端反代）
 # 该片段会被 generate_template.py 注入到 ECS UserData 头部。
 # 占位符（generate_template.py 会替换）：
 #   __FRONTEND_ARTIFACT_URL__  前端 dist 压缩包的 OSS 签名 URL（http GET）
 set -euxo pipefail
 
-LOG=/var/log/qianwenyun-bootstrap.log
+LOG=/var/log/qianwenai-bootstrap.log
 exec > >(tee -a "$LOG") 2>&1
-echo "[$(date -u +%FT%TZ)] === qianwenyun nginx (static) bootstrap start ==="
+echo "[$(date -u +%FT%TZ)] === qianwenai nginx (static) bootstrap start ==="
 
 # 1. 安装 Nginx
 if ! command -v nginx >/dev/null 2>&1; then
@@ -27,13 +27,13 @@ if [ -n "$FRONTEND_URL" ]; then
   rm -f /tmp/frontend.tar.gz
 else
   cat > /var/www/frontend/index.html <<'HTML'
-<!doctype html><meta charset=utf-8><title>qianwenyun</title>
+<!doctype html><meta charset=utf-8><title>qianwenai</title>
 <h1>ECS is up. Awaiting frontend artifact.</h1>
 HTML
 fi
 
 # 3. 写站点配置：纯静态托管，无后端反代
-cat > /etc/nginx/conf.d/qianwenyun.conf <<NGINX
+cat > /etc/nginx/conf.d/qianwenai.conf <<NGINX
 server {
     listen 80 default_server;
     server_name _;

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # 清理部署资源：整栈销毁（DeleteStack + 清 OSS + 清状态文件）
 #
-# 自动从项目根目录 .qianwenyun-deploy 读 stack_id / region_id / artifact_bucket。
-# 删除完成后清理 .qianwenyun-deploy(.local)。
+# 自动从项目根目录 .qianwenai-deploy 读 stack_id / region_id / artifact_bucket。
+# 删除完成后清理 .qianwenai-deploy(.local)。
 #
 # 用法：
 #   ./delete_stack.sh [--project-root .] [--yes]
@@ -20,7 +20,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-STATE="$ROOT/.qianwenyun-deploy"
+STATE="$ROOT/.qianwenai-deploy"
 [ -f "$STATE" ] || { echo "找不到 $STATE" >&2; exit 1; }
 
 # 一次性解析状态文件，输出 shell 安全的变量赋值。
@@ -121,5 +121,5 @@ if [ -n "$BUCKET" ]; then
 fi
 
 # 4) 清理本地状态文件
-rm -f "$STATE" "$ROOT/.qianwenyun-deploy.local"
-echo "[delete] 完成。本地 .qianwenyun-deploy(.local) 已删除。"
+rm -f "$STATE" "$ROOT/.qianwenai-deploy.local"
+echo "[delete] 完成。本地 .qianwenai-deploy(.local) 已删除。"

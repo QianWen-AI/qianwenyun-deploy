@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 探测当前 region 下由本工具创建（tag from=qianwenyun）的存量 ROS 栈。
+# 探测当前 region 下由本工具创建（tag from=qianwenai）的存量 ROS 栈。
 #
 # 用途：
 #   - 发现同项目已有部署 → 提供热更新/重新部署选项
@@ -23,7 +23,7 @@ APP_NAME="${2:-}"
 
 # --- 查询 ROS 栈 ---
 STACKS_OUT=$(aliyun ros ListStacks --RegionId "$REGION" \
-  --Tag.1.Key from --Tag.1.Value qianwenyun 2>&1) || {
+  --Tag.1.Key from --Tag.1.Value qianwenai 2>&1) || {
   echo "[existing] ListStacks 失败：$STACKS_OUT" >&2; exit 2; }
 
 # --- 分析 ---
@@ -49,7 +49,7 @@ for s in stacks_data.get("Stacks", []):
     for t in tags:
         key = t.get("Key") or t.get("TagKey") or ""
         val = t.get("Value") or t.get("TagValue") or ""
-        if key == "qianwenyun-appName":
+        if key == "qianwenai-appName":
             tag_app_name = val
 
     stack_info = {

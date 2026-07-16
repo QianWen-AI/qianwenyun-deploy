@@ -53,7 +53,7 @@ def load_skeleton(topology: str, with_rds: bool) -> str:
 
 
 def build_userdata(app_type: str, args) -> str:
-    parts = ["#!/bin/bash", "set -euxo pipefail", "exec >> /var/log/qianwenyun-bootstrap.log 2>&1"]
+    parts = ["#!/bin/bash", "set -euxo pipefail", "exec >> /var/log/qianwenai-bootstrap.log 2>&1"]
 
     nginx_mode = getattr(args, "nginx_mode", "static-proxy")
 
@@ -82,7 +82,7 @@ def build_userdata(app_type: str, args) -> str:
         backend = backend.replace("__BACKEND_ARTIFACT_URL__", args.backend_artifact_url or "")
         backend = backend.replace("__BACKEND_MODE__", args.backend_mode or "docker-image")
         backend = backend.replace("__BACKEND_PORT__", str(args.backend_port))
-        backend = backend.replace("__BACKEND_IMAGE_NAME__", args.backend_image_name or "qianwenyun-app:latest")
+        backend = backend.replace("__BACKEND_IMAGE_NAME__", args.backend_image_name or "qianwenai-app:latest")
         parts.append("# --- backend: docker ---")
         parts.append(backend)
     elif app_type.startswith("binary-"):
@@ -116,9 +116,9 @@ def inject_userdata_body(template_text: str, userdata_body: str) -> str:
     encoded = base64.b64encode(userdata_body.encode("utf-8")).decode("ascii")
 
     loader = (
-        f"echo '{encoded}' | base64 -d > /tmp/qianwenyun-main.sh\n"
-        f"chmod +x /tmp/qianwenyun-main.sh\n"
-        f". /tmp/qianwenyun-main.sh"
+        f"echo '{encoded}' | base64 -d > /tmp/qianwenai-main.sh\n"
+        f"chmod +x /tmp/qianwenai-main.sh\n"
+        f". /tmp/qianwenai-main.sh"
     )
 
     for line in template_text.splitlines():
@@ -153,7 +153,7 @@ def main():
     ap.add_argument("--backend-mode", default="docker-image", choices=["docker-image", "docker-compose"])
     ap.add_argument("--backend-image-name", default="")
     ap.add_argument("--backend-entry", default="",
-                    help="完整启动命令（相对 /opt/qianwenyun），如 ./server / "
+                    help="完整启动命令（相对 /opt/qianwenai），如 ./server / "
                          "\"python3 app.py\" / \"java -jar app.jar\" / \"node server.js\" / "
                          "\"gunicorn -b :8080 app:app\"。脚本不再自动补解释器前缀，"
                          "命令以此为唯一来源。")

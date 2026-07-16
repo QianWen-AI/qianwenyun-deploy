@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/QianWen-AI/qianwenyun-deploy/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" /></a>
-  <a href="https://github.com/QianWen-AI/qianwenyun-deploy/stargazers"><img src="https://img.shields.io/github/stars/QianWen-AI/qianwenyun-deploy?style=social" alt="Stars" /></a>
+  <a href="https://github.com/QianWen-AI/qianwenai-deploy/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" /></a>
+  <a href="https://github.com/QianWen-AI/qianwenai-deploy/stargazers"><img src="https://img.shields.io/github/stars/QianWen-AI/qianwenai-deploy?style=social" alt="Stars" /></a>
   <a href="https://agentskills.io"><img src="https://img.shields.io/badge/Agent%20Skills-compatible-brightgreen.svg" alt="Agent Skills" /></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-blue.svg" alt="Node.js" /></a>
 </p>
@@ -85,7 +85,7 @@
 ### Installation
 
 ```bash
-npx skills add QianWen-AI/qianwenyun-deploy
+npx skills add QianWen-AI/qianwenai-deploy
 ```
 
 ### Let Your Agent Handle It (Recommended)
@@ -133,7 +133,7 @@ A full-stack deployment consists of 14 steps. The Agent handles them automatical
 
 Contributions are welcome! You can help improve the project in the following ways:
 
-- **Report bugs** — If you encounter an issue, please [open an Issue](https://github.com/QianWen-AI/qianwenyun-deploy/issues) and include the steps needed to reproduce it.
+- **Report bugs** — If you encounter an issue, please [open an Issue](https://github.com/QianWen-AI/qianwenai-deploy/issues) and include the steps needed to reproduce it.
 - **Request features** — Have an idea for a new feature or an improvement? Feel free to submit a Feature Request.
 - **Submit a PR** — Fork the repository, create a new branch, make your changes, and open a Pull Request.
 - **Improve the documentation** — We welcome typo fixes, clearer wording, and better examples.

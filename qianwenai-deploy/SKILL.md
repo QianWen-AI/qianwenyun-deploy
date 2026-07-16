@@ -1,5 +1,5 @@
 ---
-name: qianwenyun-deploy
+name: qianwenai-deploy
 description: >-
   将本地项目或 Git 仓库一键部署、发布和更新至云端，并生成可访问的线上服务。
   当用户提出“部署这个项目”“把应用上线”“发布网站”“生成访问地址”
@@ -41,7 +41,7 @@ reference/
 
 | 信号 | 工作流 |
 |------|--------|
-| 存在 `.qianwenyun-deploy` + 用户说「更新」 | 热更新 |
+| 存在 `.qianwenai-deploy` + 用户说「更新」 | 热更新 |
 | 消息含 Git URL（github/gitlab/gitee/`.git` 后缀） | 全栈部署（步骤 2 先 clone） |
 | 其它 | 全栈部署（本地项目） |
 
@@ -68,7 +68,7 @@ bash scripts/check_env.sh
 检测到 Git URL 时，clone 到临时目录后切换为项目根：
 
 ```bash
-git clone [--branch <ref>] --depth 1 <url> /tmp/qianwenyun-clone-$(date +%s)
+git clone [--branch <ref>] --depth 1 <url> /tmp/qianwenai-clone-$(date +%s)
 ```
 
 支持 `url#branch` 后缀指定分支/tag。clone 失败时区分网络/不存在/需认证并给明确提示。私有仓库提示配置 Git 凭证，**不在聊天中收集 token**。
@@ -95,7 +95,7 @@ Git URL 源在此步骤后自动执行构建（npm build / go build / pip instal
 bash scripts/check_existing.sh "$REGION" "$APP_NAME"
 ```
 
-脚本扫描 ROS 栈（按 `from=qianwenyun` tag 匹配），检测是否已有同项目部署。
+脚本扫描 ROS 栈（按 `from=qianwenai` tag 匹配），检测是否已有同项目部署。
 
 如果发现同项目已部署，AskUserQuestion：
 
@@ -138,8 +138,8 @@ python scripts/generate_template.py \
   --topology single --app-type binary-go --backend-port 8080 \
   --nginx-mode static-proxy --backend-entry ./server \
   --frontend-artifact-url "" --backend-artifact-url "" \
-  --output /tmp/qianwenyun-template.yaml \
-  --userdata-output /tmp/qianwenyun-userdata.sh
+  --output /tmp/qianwenai-template.yaml \
+  --userdata-output /tmp/qianwenai-userdata.sh
 ```
 
 此时产物 URL 为空占位符，步骤 10 会重新生成。含 RDS 时加 `--with-rds`，密码经 `DB_PASSWORD` 环境变量传入。
@@ -160,7 +160,7 @@ bash scripts/check_stock.sh "$REGION" "$INSTANCE_TYPE" 1
 > ⚠️ 此步骤会创建临时 OSS 桶，须先告知用户（见 `reference/interaction_rules.md` 额外资源费用透明）。
 
 ```bash
-python scripts/upload_artifacts.py --region "$REGION" --template-file /tmp/qianwenyun-template.yaml
+python scripts/upload_artifacts.py --region "$REGION" --template-file /tmp/qianwenai-template.yaml
 bash scripts/validate_template.sh "$REGION" "$TEMPLATE_URL"
 ZONE_ID="$ZONE_ID" APP_NAME=myapp INSTANCE_TYPE="$INSTANCE_TYPE" \
   PASSWORD='Tmp_Pwd_For_Pricing!1' bash scripts/estimate_cost.sh "$REGION" "$TEMPLATE_URL"
@@ -177,11 +177,11 @@ AskUserQuestion 汇总确认时**同时展示小时价和月价**（小时价 ×
 ```bash
 python scripts/upload_artifacts.py --region "$REGION" --bucket "$BUCKET" \
   --frontend-dir dist --backend-mode binary --backend-dir backend \
-  > /tmp/qianwenyun-artifacts.json
+  > /tmp/qianwenai-artifacts.json
 
-python scripts/generate_template.py ... --artifacts-json /tmp/qianwenyun-artifacts.json ...
+python scripts/generate_template.py ... --artifacts-json /tmp/qianwenai-artifacts.json ...
 python scripts/upload_artifacts.py --region "$REGION" --bucket "$BUCKET" \
-  --template-file /tmp/qianwenyun-template.yaml
+  --template-file /tmp/qianwenai-template.yaml
 ```
 
 > ⚠️ 签名 URL 不要手动复制粘贴，用 `--artifacts-json` 管道传递。
@@ -190,9 +190,9 @@ python scripts/upload_artifacts.py --region "$REGION" --bucket "$BUCKET" \
 
 ```bash
 APP_NAME=myapp APP_DESC='描述' INSTANCE_TYPE="$INSTANCE_TYPE" \
-  PASSWORD='<random>' USERDATA_FILE=/tmp/qianwenyun-userdata.sh \
+  PASSWORD='<random>' USERDATA_FILE=/tmp/qianwenai-userdata.sh \
   ZONE_ID="$ZONE_ID" \
-  bash scripts/create_stack.sh "$REGION" "$TEMPLATE_URL" "qianwenyun-myapp-$(date +%Y%m%d%H%M)"
+  bash scripts/create_stack.sh "$REGION" "$TEMPLATE_URL" "qianwenai-myapp-$(date +%Y%m%d%H%M)"
 ```
 
 密码由 Agent 生成（≥12 位，特殊字符仅 `!@%^*+=_-`），**不输出到聊天**。创建后立即写临时状态文件，中断后仍可清理。
@@ -218,7 +218,7 @@ PASSWORD="<ecs-pwd>" python scripts/record_state.py \
   --stack-id "$STACK_ID" --stack-name "..." --region "$REGION" \
   --topology single --app-type binary-go --nginx-mode static-proxy \
   --outputs-json '{...}' --artifact-bucket "..." \
-  --artifact-urls-json "$(cat /tmp/qianwenyun-artifacts.json)"
+  --artifact-urls-json "$(cat /tmp/qianwenai-artifacts.json)"
 ```
 
 `--artifact-urls-json` 直接传 `upload_artifacts.py` 的输出 JSON，存为 `current_artifact_urls`，供热更新回滚。
@@ -229,14 +229,14 @@ PASSWORD="<ecs-pwd>" python scripts/record_state.py \
 
 ## 热更新
 
-**触发**：存在 `.qianwenyun-deploy` + 用户想更新代码。IP 不变，< 3 分钟。
+**触发**：存在 `.qianwenai-deploy` + 用户想更新代码。IP 不变，< 3 分钟。
 
 ### 步骤 U1 · 构建 + 上传新产物
 
 ```bash
 python scripts/upload_artifacts.py --region "$REGION" --bucket "$BUCKET" \
   --frontend-dir dist --backend-mode binary --backend-dir backend \
-  > /tmp/qianwenyun-artifacts.json
+  > /tmp/qianwenai-artifacts.json
 ```
 
 复用首次部署的 OSS 桶（从状态文件读 `artifact_bucket`）。
@@ -289,4 +289,4 @@ bash scripts/delete_stack.sh --project-root . --yes
 
 详细约束、错误处理、CLI 命令参考见 `reference/error_handling.md`、`reference/cli_cheatsheet.md`。
 
-`.qianwenyun-deploy` = 当前部署状态（删除时清理）；`.aliyun-config.json/deploy` = 用户偏好（跨部署持久）。
+`.qianwenai-deploy` = 当前部署状态（删除时清理）；`.aliyun-config.json/deploy` = 用户偏好（跨部署持久）。
